@@ -1,20 +1,25 @@
-package trista.josecarlos.keystore_josetrista2;
+package trista.josecarlos.keystore_josetrista2
 
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import androidx.annotation.RequiresApi
 import java.io.InputStream
 import java.io.OutputStream
+import java.security.DigestOutputStream
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.IvParameterSpec
-public class CryptoManager {
+
+@RequiresApi(Build.VERSION_CODES.M)
+class CryptoManager {
     private val keyStore = KeyStore.getInstance("AndroidKeyStore").apply {
         load(null)
     }
 
-    private val encryptCipher = Cipher.getInstance(TRANSFORMATION).apply {
+    private val encryptCipher get() = Cipher.getInstance(TRANSFORMATION).apply {
         init(Cipher.ENCRYPT_MODE, getKey())
     }
 
@@ -32,15 +37,15 @@ public class CryptoManager {
     private fun createKey(): SecretKey {
         return KeyGenerator.getInstance(ALGORITHM).apply {
             init(
-                    KeyGenParameterSpec.Builder(
-                                    "secret",
-                                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-                            )
-                            .setBlockModes(BLOCK_MODE)
-                            .setEncryptionPaddings(PADDING)
-                            .setUserAuthenticationRequired(false)
-                            .setRandomizedEncryptionRequired(true)
-                            .build()
+                KeyGenParameterSpec.Builder(
+                    "secret",
+                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+                )
+                    .setBlockModes(BLOCK_MODE)
+                    .setEncryptionPaddings(PADDING)
+                    .setUserAuthenticationRequired(false)
+                    .setRandomizedEncryptionRequired(true)
+                    .build()
             )
         }.generateKey()
     }
@@ -57,23 +62,17 @@ public class CryptoManager {
     }
 
     fun decrypt(inputStream: InputStream): ByteArray {
-        return try {
-            inputStream.use {
-                val ivSize = it.read()
-                val iv = ByteArray(ivSize)
-                it.read(iv)
+        return inputStream.use {
+            val ivSize = it.read()
+            val iv = ByteArray(ivSize)
+            it.read(iv)
 
-                val encryptedBytesSize = it.read()
-                val encryptedBytes = ByteArray(encryptedBytesSize)
-                it.read(encryptedBytes)
+            val encryptedBytesSize = it.read()
+            val encryptedBytes = ByteArray(encryptedBytesSize)
+            it.read(encryptedBytes)
 
-                getDecryptCipherForIv(iv).doFinal(encryptedBytes)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return ByteArray(2)
+            getDecryptCipherForIv(iv).doFinal(encryptedBytes)
         }
-
     }
 
     companion object {
